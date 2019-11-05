@@ -1,0 +1,32 @@
+#!/bin/bash
+
+newsetting() {
+  read -p "$1 [$3]: " thisset
+  if [ -z "$thisset" ]; then
+    echo "$2 $3" >> $4
+  else
+    echo "$2 $thisset" | sed 's/\/$//g' >> $4
+  fi
+}
+
+getsetting() {
+	grep "^$2[ \t]*" $1 | sed 's/^'"$2"'[ \t]*//g'
+}
+
+echo -n "Checking curl..."
+which curl
+[[ $? -eq 0 ]] || exit
+
+echo -n "Checking m4..."
+which m4
+[[ $? -eq 0 ]] || exit
+
+echo -n "Creating tmp..."
+mkdir -p tmp
+[[ $? -eq 0 ]] && echo "done" || (echo "error" ; exit)
+newsetting "Enter install base directory" "BASEDIR" "/opt/playhooky" "tmp/settings.txt"
+newsetting "Enter IFTTT Webhook Key" "KEYTEXT" "NONE" "tmp/settings.txt"
+
+echo -n "Updating available checks..."
+m4 -DBUILTFILES="$(ls checks/*m4 | sed 's/^checks/build/g;s/\.m4$//g' | tr '\n' ' ')" -DINSTALLEDFILES="$(ls checks/*m4 | sed 's/^checks/'"$(getsetting tmp/settings.txt BASEDIR | sed 's/\//\\\//g')"'\/bin/g;s/\.m4$//g' | tr '\n' ' ')"  Makefile.m4 > Makefile
+[[ $? -eq 0 ]] && echo "done" || (echo "error" ; exit)
